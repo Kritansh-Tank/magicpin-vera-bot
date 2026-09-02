@@ -40,6 +40,10 @@ This maps directly to the 5 scoring dimensions:
 
 8. **Suppression + anti-repetition**: Each `suppression_key` fires once per session. Last-sent body tracked per conversation to block verbatim repeats (`-2` penalty per repeat).
 
+9. **30s tick budget**: `/v1/tick` tracks elapsed time and returns early with whatever actions are ready if the 25s budget is hit — ensuring it never exceeds the judge's 30s timeout even under Groq rate-limit retries.
+
+10. **Correct HTTP status codes**: `/v1/context` returns `400` for invalid scope and `409` for stale version (per brief §2.1 spec), not a generic 200 with `accepted: false`.
+
 ### Judge simulator results (pre-submission)
 
 ```
@@ -99,8 +103,8 @@ python generate_submission.py
 |--------|------|-------------|
 | `GET` | `/v1/healthz` | Liveness probe — returns status, uptime, context counts, LLM model |
 | `GET` | `/v1/metadata` | Bot identity, model, approach summary |
-| `POST` | `/v1/context` | Receive category / merchant / customer / trigger context (idempotent, versioned) |
-| `POST` | `/v1/tick` | Periodic wake-up — compose proactive messages for available triggers |
+| `POST` | `/v1/context` | Receive context (idempotent, versioned) — `200` accepted, `409` stale version, `400` invalid scope |
+| `POST` | `/v1/tick` | Periodic wake-up — compose proactive messages; 25s budget, returns early if approaching 30s judge timeout |
 | `POST` | `/v1/reply` | Receive merchant/customer reply — return next action (send/wait/end) |
 | `POST` | `/v1/teardown` | Wipe in-memory state (called by judge harness at start/end of each test run) |
 
@@ -117,6 +121,7 @@ check_submission.py     — Quick quality check: word counts, CTA coverage, send
 test_bot.py             — 11-check smoke test (structural + endpoint validation)
 test_quality.py         — Message quality test (7 trigger kinds + reply flow)
 test_fixes.py           — Language + persona fix verification (Hinglish, merchant_on_behalf)
+test_gaps.py            — Verifies HTTP 400/409 status codes and tick budget (4/4 PASS)
 start.bat               — Windows: set API keys + start uvicorn
 tunnel.bat              — Windows: open ngrok public tunnel on port 8080
 dataset/                — Seed data: 5 categories, 10 merchants, 15 customers, 25 triggers
