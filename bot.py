@@ -977,12 +977,21 @@ async def metadata():
 @app.post("/v1/context")
 async def push_context(body: ContextBody):
     if body.scope not in ("category", "merchant", "customer", "trigger"):
-        return {"accepted": False, "reason": "invalid_scope", "details": f"Unknown: {body.scope}"}
+        from fastapi import Response
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=400,
+            content={"accepted": False, "reason": "invalid_scope", "details": f"Unknown: {body.scope}"}
+        )
 
     key = (body.scope, body.context_id)
     cur = contexts.get(key)
     if cur and cur["version"] >= body.version:
-        return {"accepted": False, "reason": "stale_version", "current_version": cur["version"]}
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=409,
+            content={"accepted": False, "reason": "stale_version", "current_version": cur["version"]}
+        )
 
     contexts[key] = {"version": body.version, "payload": body.payload}
     log.info(f"Stored {body.scope}/{body.context_id} v{body.version}")
@@ -993,6 +1002,8 @@ async def push_context(body: ContextBody):
 @app.post("/v1/tick")
 async def tick(body: TickBody):
     actions = []
+    TICK_BUDGET = 25.0  # return early if approaching 30s judge timeout
+    tick_start = time.time()
 
     for trg_id in body.available_triggers:
         trg_entry = contexts.get(("trigger", trg_id))
@@ -1069,6 +1080,9 @@ async def tick(body: TickBody):
         })
 
         if len(actions) >= 20:
+            break
+        if time.time() - tick_start >= TICK_BUDGET:
+            log.warning(f"Tick budget exhausted after {len(actions)} actions — returning early")
             break
 
     log.info(f"Tick {body.now}: {len(actions)} actions")
