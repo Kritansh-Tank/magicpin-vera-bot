@@ -969,7 +969,7 @@ async def metadata():
             "Auto-reply detection, intent-transition routing (YES→execute immediately), "
             "suppression tracking, anti-repetition, and graceful exit on opt-out."
         ),
-        "contact_email": "kritanshtank@gmail.com",
+        "contact_email": "tankkritansh088@gmail.com",
         "version": "2.2.0",
         "submitted_at": "2026-09-02T07:00:00Z",
     }
