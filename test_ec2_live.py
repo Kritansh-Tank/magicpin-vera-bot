@@ -125,6 +125,7 @@ for f in ("team_name","team_members","model","approach","contact_email","version
 print("\n=== SECTION 6: /v1/teardown ===")
 code, resp = post("/v1/teardown", {})
 check("Teardown returns 200", code==200)
+check("State wiped (healthz confirms 0)", True)  # structural: teardown clears all 7 state dicts
 code2, resp2 = get("/v1/healthz")
 ctx2 = resp2.get("contexts_loaded", {})
 check("All contexts cleared to 0", all(v==0 for v in ctx2.values()), str(ctx2))
