@@ -677,9 +677,9 @@ DECISION QUALITY — what separates 50/50 from 30/50:
 • CRITICAL: The first sentence of the message must contain the data hook (the number, finding, or event). Not the name. Not a warm-up. The hook.
 
 MESSAGE LENGTH — strict:
-• Maximum 70 words. Count them. WhatsApp messages over 70 words get ignored.
+• Maximum 55 words. Count them. WhatsApp messages over 55 words get ignored.
 • 2-3 sentences max. One hook sentence + one context sentence + one CTA sentence.
-• If you exceed 70 words, rewrite. No exceptions.
+• If you exceed 55 words, rewrite. No exceptions.
 
 MESSAGE CRAFT:
 • Address by first name — but AFTER the hook, or at the very start if needed for flow
@@ -853,7 +853,7 @@ def build_reply_prompt(
         "5. Off-topic → 1-sentence decline, redirect.",
         "6. Otherwise → advance the conversation with ONE next step, be specific.",
         f"Category voice: {vocab.get('tone','')}",
-        "Reply body: ≤70 words. No URLs.",
+        "Reply body: ≤55 words. No URLs.",
         "",
         'Output JSON: {"action":"send"|"wait"|"end","body":"...","cta":"...","wait_seconds":N,"rationale":"Signal: X | Decision: Y | Lever: Z"}',
         "body and cta required when action=send; wait_seconds required when action=wait",
