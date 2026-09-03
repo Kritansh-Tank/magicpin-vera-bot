@@ -39,7 +39,7 @@ USE_LLM      = bool(GROQ_API_KEY)
 groq_client: Optional[Groq] = Groq(api_key=GROQ_API_KEY) if USE_LLM else None
 
 START_TIME = time.time()
-app = FastAPI(title="Vera Bot v2", version="2.0.0")
+app = FastAPI(title="Vera Bot v2", version="2.3.0")
 
 # ── State ──────────────────────────────────────────────────────────────────────
 contexts: dict[tuple[str, str], dict]  = {}   # (scope, id) → {version, payload}
@@ -970,7 +970,7 @@ async def metadata():
             "suppression tracking, anti-repetition, and graceful exit on opt-out."
         ),
         "contact_email": "tankkritansh088@gmail.com",
-        "version": "2.2.0",
+        "version": "2.3.0",
         "submitted_at": "2026-09-02T07:00:00Z",
     }
 
