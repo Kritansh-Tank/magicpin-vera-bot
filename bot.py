@@ -986,7 +986,12 @@ async def push_context(body: ContextBody):
 
     key = (body.scope, body.context_id)
     cur = contexts.get(key)
-    if cur and cur["version"] >= body.version:
+    # Same version = idempotent no-op → 200 (brief §2.1: "re-posting same version is a no-op")
+    if cur and cur["version"] == body.version:
+        return {"accepted": True, "ack_id": f"ack_{body.context_id}_v{body.version}",
+                "stored_at": now_iso()}
+    # Strictly lower version = stale → 409
+    if cur and cur["version"] > body.version:
         from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=409,
