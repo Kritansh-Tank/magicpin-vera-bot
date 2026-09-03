@@ -44,6 +44,21 @@ This maps directly to the 5 scoring dimensions:
 
 10. **Correct HTTP status codes**: `/v1/context` returns `400` for invalid scope and `409` for stale version (per brief §2.1 spec), not a generic 200 with `accepted: false`.
 
+11. **Stop after 3 unanswered nudges**: Per-merchant `unanswered_sends` counter increments on every outbound tick action and resets when a genuine merchant reply arrives. After 3 consecutive unanswered sends, that merchant is skipped in subsequent ticks (Open Challenge #5 from brief).
+
+### Full audit results (60/60 PASS — field-by-field against both briefs)
+
+```
+[PASS] /v1/context  — idempotency (same version=200, lower=409, invalid=400), ack_id, stored_at
+[PASS] /v1/tick     — all 11 required action fields, 25s budget, valid CTA/send_as values
+[PASS] /v1/reply    — send/wait/end actions, body, cta, wait_seconds on wait
+[PASS] /v1/healthz  — status, uptime_seconds, contexts_loaded (4 keys)
+[PASS] /v1/metadata — all 7 required fields non-blank
+[PASS] /v1/teardown — all state cleared to zero
+[PASS] submission.jsonl — 25 entries, all fields, <=70 words
+[PASS] Open challenges 1-5 — auto-reply, intent, cadence, language, 3-nudge cap
+```
+
 ### Judge simulator results (pre-submission)
 
 ```
@@ -121,6 +136,8 @@ check_submission.py     — Quick quality check: word counts, CTA coverage, send
 test_bot.py             — 11-check smoke test (structural + endpoint validation)
 test_quality.py         — Message quality test (7 trigger kinds + reply flow)
 test_fixes.py           — Language + persona fix verification (Hinglish, merchant_on_behalf)
+test_full_audit.py      — 60-check field-by-field audit against both brief specs (60/60 PASS)
+test_schema.py          — Schema verification for all endpoint request/response shapes
 test_gaps.py            — Verifies HTTP 400/409 status codes and tick budget (4/4 PASS)
 start.bat               — Windows: set API keys + start uvicorn
 tunnel.bat              — Windows: open ngrok public tunnel on port 8080
