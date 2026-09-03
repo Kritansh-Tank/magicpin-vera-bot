@@ -48,6 +48,7 @@ suppressed: set[str]                   = set() # fired suppression_keys
 ended_convs: set[str]                  = set()
 auto_reply_counts: dict[str, int]      = {}
 last_sent: dict[str, str]              = {}    # conv_id → last body
+unanswered_sends: dict[str, int]       = {}    # merchant_id → consecutive unanswered outbound count
 
 # ── Pydantic models ────────────────────────────────────────────────────────────
 class ContextBody(BaseModel):
@@ -1041,6 +1042,11 @@ async def tick(body: TickBody):
         if sup_key and sup_key in suppressed:
             continue
 
+        # Open challenge #5: stop after 3 consecutive unanswered nudges per merchant
+        if unanswered_sends.get(merchant_id, 0) >= 3:
+            log.info(f"Skipping {merchant_id}: {unanswered_sends[merchant_id]} unanswered nudges")
+            continue
+
         conv_id = f"conv_{merchant_id}_{trg_id}"
         if conv_id in ended_convs:
             continue
@@ -1061,6 +1067,7 @@ async def tick(body: TickBody):
             log.warning(f"Anti-repetition skip: {conv_id}")
             continue
         last_sent[conv_id] = body_text
+        unanswered_sends[merchant_id] = unanswered_sends.get(merchant_id, 0) + 1
 
         conversations.setdefault(conv_id, []).append(
             {"from": "vera", "body": body_text, "ts": body.now})
@@ -1099,12 +1106,18 @@ async def reply(body: ReplyBody):
     conv_id = body.conversation_id
     message = body.message.strip()
     turn = body.turn_number
+    from_role = body.from_role
 
     if conv_id in ended_convs:
         return {"action": "end", "rationale": "Conversation already ended."}
 
+    # Real merchant reply resets unanswered nudge counter
+    if from_role == "merchant" and not is_auto_reply(message):
+        unanswered_sends[body.merchant_id] = 0
+
+    # Track turn in conversation
     conversations.setdefault(conv_id, []).append(
-        {"from": body.from_role, "body": message, "ts": body.received_at})
+        {"from": from_role, "body": message, "ts": body.received_at})
     conv_history = conversations[conv_id]
 
     merchant = None; category = None; customer = None
@@ -1194,7 +1207,7 @@ JSON output only: {"action":"send"|"wait"|"end","body":"...","cta":"...","wait_s
 
 @app.post("/v1/teardown")
 async def teardown():
-    for s in [contexts, conversations, suppressed, ended_convs, auto_reply_counts, last_sent]:
+    for s in [contexts, conversations, suppressed, ended_convs, auto_reply_counts, last_sent, unanswered_sends]:
         s.clear()
     return {"status": "wiped"}
 
